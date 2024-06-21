@@ -12,7 +12,7 @@ public class Main {
     public static void main(String[] args) {
         //List<Accion> accions = List.of(new AccionUno(), new AccionDos());
 
-        Start start = new Start("/confg.properties");
+        Start start = new Start("C:\\Users\\desertfoxs\\eclipse-workspace2\\Tp11-FrameWork\\src\\main\\resources\\confg.json");
         start.init();
 
     }

@@ -1,5 +1,10 @@
 package olivetti.framework;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +15,18 @@ public final class Menu{
 
     Scanner entrada = new Scanner(System.in);
     private List<Accion> acciones;
+
     public Menu(String path) {
         acciones = new ArrayList<>();
+        if(path.endsWith(".properties")){
+            cargarAccionesProperties(path);
+        }
+        else{
+            cargarAccionesJson(path);
+        }
+    }
+
+    private void cargarAccionesProperties(String path){
 
         Properties prop = new Properties();
         try (InputStream configFile = getClass().getResourceAsStream(path);) {
@@ -27,6 +42,29 @@ public final class Menu{
         } catch (Exception e) {
             throw new RuntimeException(
                     "No pude crear la instancia de TextoAImprimir... ", e);
+        }
+    }
+
+    private void cargarAccionesJson(String path) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            JsonNode root = mapper.readTree(new File(path));
+            JsonNode accionesNode = root.path("acciones");
+
+            for (JsonNode accionNode : accionesNode) {
+                String accionClassName = accionNode.asText();
+                try {
+                    Class<?> accionClass = Class.forName(accionClassName);
+                    Accion accion = (Accion) accionClass.getDeclaredConstructor().newInstance();
+                    acciones.add(accion);
+                } catch (Exception e) {
+                    System.out.println("Error cargando la clase: " + accionClassName);
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error leyendo el archivo de configuración: " + path);
+            e.printStackTrace();
         }
     }
 
