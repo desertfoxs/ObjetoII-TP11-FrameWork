@@ -1,4 +1,7 @@
 {
   "acciones": ["olivetti.utilizacion.AccionUno", "olivetti.utilizacion.AccionDos",
-  "olivetti.utilizacion.AccionTres"]
+  "olivetti.utilizacion.AccionTres"],
+
+  "max-threads": 2
+
 }

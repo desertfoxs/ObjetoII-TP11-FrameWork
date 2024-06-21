@@ -2,6 +2,7 @@ package olivetti.framework;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,11 +11,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class Menu{
 
+    private ExecutorService executor;
     Scanner entrada = new Scanner(System.in);
     private List<Accion> acciones;
+
+    private int cantHilos = 1;
 
     public Menu(String path) {
         acciones = new ArrayList<>();
@@ -33,10 +40,15 @@ public final class Menu{
             prop.load(configFile);
 
             for (String key : prop.stringPropertyNames()) {
-                String accionName1 = prop.getProperty(key);
-                Class<?> c1 = Class.forName(accionName1);
-                Accion accion = (Accion) c1.getDeclaredConstructor().newInstance();
-                acciones.add(accion);
+                if(!key.equals("max-threads")){
+                    String accionName1 = prop.getProperty(key);
+                    Class<?> c1 = Class.forName(accionName1);
+                    Accion accion = (Accion) c1.getDeclaredConstructor().newInstance();
+                    acciones.add(accion);
+                }
+                else{
+                    cantHilos = Integer.parseInt(prop.getProperty(key));
+                }
             }
 
         } catch (Exception e) {
@@ -49,7 +61,7 @@ public final class Menu{
         ObjectMapper mapper = new ObjectMapper();
         try {
             JsonNode root = mapper.readTree(new File(path));
-            JsonNode accionesNode = root.path("acciones");
+            JsonNode accionesNode = root.path("acciones"); //esto limita al usuario o esta bien??
 
             for (JsonNode accionNode : accionesNode) {
                 String accionClassName = accionNode.asText();
@@ -62,6 +74,12 @@ public final class Menu{
                     e.printStackTrace();
                 }
             }
+
+            JsonNode maxHilos = root.path("max-threads");
+            if(maxHilos.isEmpty()){
+                cantHilos = maxHilos.asInt();
+            }
+
         } catch (IOException e) {
             System.out.println("Error leyendo el archivo de configuración: " + path);
             e.printStackTrace();
@@ -69,15 +87,31 @@ public final class Menu{
     }
 
     public final void print(){
+        this.executor = Executors.newFixedThreadPool(cantHilos);
+
+        List<Callable<Void>> listAdapter = new ArrayList<>();
+
         String texto = "";
         System.out.println("Bienvenido, estas son sus opciones:");
+        System.out.println("La cantidad de hilos es: " + cantHilos);
 
         while(!(texto.equals("Salir"))){
             armarMenu();
             texto = entrada.nextLine();
+
+            if(texto.equals("Ejecutar")){
+                try {
+                    executor.invokeAll(listAdapter);
+                    executor.shutdown();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
             for(Accion accion : acciones){
                 if(accion.nombreItemMenu().equals(texto)){
-                    accion.ejecutar();
+                    //accion.ejecutar();
+                    listAdapter.add(new AdapterAccion(accion));
                 }
             }
         }
@@ -90,7 +124,8 @@ public final class Menu{
             System.out.println( indice + ". " + accion.nombreItemMenu() + " (" + accion.descripcionItemMenu() + " )");
             indice++;
         }
-        System.out.println( indice + ". Salir");
+        System.out.println( indice + ". Ejecutar");
+        System.out.println( (indice+1)  + ". Salir");
         System.out.println("Ingrese su opción: ");
     }
 }
