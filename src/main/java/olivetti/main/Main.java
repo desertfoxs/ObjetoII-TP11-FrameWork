@@ -11,6 +11,7 @@ public class Main {
 
     public static void main(String[] args) {
         //Start start = new Start("/confg.properties");
+
         Start start = new Start("C:\\Users\\desertfoxs\\eclipse-workspace2\\" +
                 "Tp11-FrameWork\\src\\main\\resources\\confg.json");
 

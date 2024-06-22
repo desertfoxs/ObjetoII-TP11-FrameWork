@@ -17,6 +17,9 @@ import java.util.concurrent.Executors;
 
 public final class Menu{
 
+    public static final String MAX_THREADS = "max-threads";
+    private static final String properties = ".properties";;
+    public static final String CLAVE_ACCIONES = "acciones";
     private ExecutorService executor;
     Scanner entrada = new Scanner(System.in);
     private List<Accion> acciones;
@@ -25,7 +28,7 @@ public final class Menu{
 
     public Menu(String path) {
         acciones = new ArrayList<>();
-        if(path.endsWith(".properties")){
+        if(path.endsWith(properties)){
             cargarAccionesProperties(path);
         }
         else{
@@ -40,7 +43,7 @@ public final class Menu{
             prop.load(configFile);
 
             for (String key : prop.stringPropertyNames()) {
-                if(!key.equals("max-threads")){
+                if(!key.equals(MAX_THREADS)){
                     String accionName1 = prop.getProperty(key);
                     Class<?> c1 = Class.forName(accionName1);
                     Accion accion = (Accion) c1.getDeclaredConstructor().newInstance();
@@ -52,8 +55,7 @@ public final class Menu{
             }
 
         } catch (Exception e) {
-            throw new RuntimeException(
-                    "No pude crear la instancia de TextoAImprimir... ", e);
+            throw new RuntimeException("No pude crear la instancia de Acciones... ", e);
         }
     }
 
@@ -61,7 +63,7 @@ public final class Menu{
         ObjectMapper mapper = new ObjectMapper();
         try {
             JsonNode root = mapper.readTree(new File(path));
-            JsonNode accionesNode = root.path("acciones"); //esto limita al usuario o esta bien??
+            JsonNode accionesNode = root.path(CLAVE_ACCIONES);
 
             for (JsonNode accionNode : accionesNode) {
                 String accionClassName = accionNode.asText();
@@ -75,7 +77,7 @@ public final class Menu{
                 }
             }
 
-            JsonNode maxHilos = root.path("max-threads");
+            JsonNode maxHilos = root.path(MAX_THREADS);
             if(maxHilos.isEmpty()){
                 cantHilos = maxHilos.asInt();
             }
@@ -102,10 +104,11 @@ public final class Menu{
             if(texto.equals("Ejecutar")){
                 try {
                     executor.invokeAll(listAdapter);
-                    executor.shutdown();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+
+                listAdapter.clear();
             }
 
             for(Accion accion : acciones){
@@ -115,6 +118,7 @@ public final class Menu{
                 }
             }
         }
+        executor.shutdown();
     }
 
 
